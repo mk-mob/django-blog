@@ -13,10 +13,51 @@ class CategoryAdmin(admin.ModelAdmin):
 class TagAdmin(admin.ModelAdmin):
     pass
 
+class PostTitleFilter(admin.SimpleListFilter):
+    title = '本文'
+    parameter_name = 'body_contains'
+
+    def queryset(self, request, queryset):
+        if self.value() is not None:
+            return queryset.filter(body__icontains=self.value())
+        return queryset
+
+    def lookups(self, request, model_admin):
+        return [
+            ("ブログ", "「ブログ」を含む"),
+            ("日記", "「日記」を含む"),
+            ("開発", "「開発」を含む"),
+        ]
 
 @admin.register(models.Post)
 class PostAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('id','title', 'category', 'tags_summary','published','created', 'updated')
+    list_select_related = ('category', )
+    list_editable = ('title', 'category')
+    search_fields = ('title', 'category__name', 'tags__name', 'created', 'updated')
+    ordering = ('-updated', '-created')
+    list_filter = (PostTitleFilter,'category', 'tags', 'created', 'updated')
+    actions = ["publish", "unpublish"]
+    
+    def tags_summary(self, obj):
+        qs = obj.tags.all()
+        label = ', '.join(map(str, qs))
+        return label
+    tags_summary.short_description = "tags"
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('tags')
+        
+    
+    def publish(self, request, queryset):
+        queryset.update(published=True)
+        
+    publish.short_description = "公開する"
+        
+    def unpublish(self, request, queryset):
+        queryset.update(published=False)
+        
+    unpublish.short_description = "下書きに戻す"
 
 class BlogAdminSite(AdminSite):
     site_header = 'マイページ'

@@ -53,6 +53,7 @@ class Post(models.Model):
     tags = models.ManyToManyField(
         Tag,
         blank=True)
+    published = models.BooleanField(default=True)
 
     def __str__(self):
         return self.title
